@@ -5,7 +5,7 @@ const path = require('path');
 
 const app = express();
 const PUERTO = process.env.PORT || 3000;
-const CONTRASEÑA_ADMIN = "pon-tu-clave-segura-aqui"; // ← CAMBIA ESTA CONTRASEÑA
+const CONTRASEÑA_ADMIN = "12345"; // ← CAMBIA ESTA CONTRASEÑA
 
 app.use(cors());
 app.use(express.json());
