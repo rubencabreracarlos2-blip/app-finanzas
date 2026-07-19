@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es-ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanzas Compartidas</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
+    <style>
+        * {margin:0; padding:0; box-sizing:border-box; font-family:Arial, sans-serif;}
+        body {background:#f0f4f8; max-width:480px; margin:0 auto; padding:1rem;}
+
+        /* PANTALLA DE INICIO */
+        .pantalla-inicio {position:fixed; top:0; left:0; width:100%; height:100%; background:#2563eb; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; z-index:9999; transition:opacity 0.8s ease-out;}
+        .pantalla-inicio.oculta {opacity:0; pointer-events:none;}
+        .logo-inicio {width:140px; height:140px; border-radius:20px; background:white; display:flex; align-items:center; justify-content:center; font-size:70px; margin-bottom:2rem;}
+        .frase-inicio {font-size:1.3rem; font-weight:500; text-align:center; padding:0 2rem;}
+
+        /* INTERFAZ PRINCIPAL */
+        .admin-bar {background:#fef3c7; padding:0.8rem; border-radius:8px; margin-bottom:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;}
+        .admin-bar input {flex:1; min-width:150px; padding:0.5rem; border-radius:4px; border:1px solid #f59e0b;}
+        .admin-bar button {padding:0.5rem 1rem; background:#f59e0b; color:white; border:none; border-radius:4px; cursor:pointer;}
+        .saldo-grande {background:linear-gradient(135deg,#2563eb,#1d4ed8); color:white; padding:1.5rem; border-radius:12px; text-align:center; font-size:2rem; font-weight:bold; margin-bottom:1rem; box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+        .fila-resumen {display:flex; gap:0.8rem; margin-bottom:1rem; flex-wrap:wrap;}
+        .caja {flex:1; min-width:140px; padding:1rem; border-radius:8px; text-align:center; color:white;}
+        .ing {background:#16a34a;} .gas {background:#dc2626;}
+        .periodo {background:white; padding:1rem; border-radius:8px; margin-bottom:1rem; border-left:4px solid #2563eb;}
+        .alertas {background:#fffbeb; border-left:4px solid #f59e0b; padding:1rem; border-radius:8px; margin-bottom:1rem; display:none;}
+        .alertas.activo {display:block;}
+        .tabs {display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;}
+        .tab-btn {flex:1; min-width:90px; padding:0.7rem; border:none; border-radius:6px; background:white; color:#2563eb; cursor:pointer; font-weight:500;}
+        .tab-btn.activo {background:#2563eb; color:white;}
+        .form {background:white; padding:1.2rem; border-radius:8px; margin-bottom:1rem; display:none; box-shadow:0 2px 8px rgba(0,0,0,0.05);}
+        .form.activo {display:block;}
+        input, select {width:100%; padding:0.7rem; margin:0.5rem 0; border:1px solid #cbd5e1; border-radius:6px; font-size:1rem;}
+        button {background:#16a34a; color:white; border:none; padding:0.8rem; border-radius:6px; width:100%; cursor:pointer; border-radius:6px; font-size:1rem; font-weight:500;}
+        button:hover {background:#15803d;}
+        .item {padding:0.8rem; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; gap:0.5rem; flex-wrap:wrap;}
+        .borrar {background:#ef4444; width:auto; padding:0.4rem 0.6rem; font-size:0.8rem; display:none; border-radius:4px;}
+        .borrar.visible {display:inline-block;}
+        .positivo {color:#16a34a; font-weight:bold;}
+        .negativo {color:#dc2626; font-weight:bold;}
+    </style>
+</head>
+<body>
+    <!-- PANTALLA DE PRESENTACIÓN -->
+    <div class="pantalla-inicio" id="pantallaInicio">
+        <div class="logo-inicio">💰</div>
+        <div class="frase-inicio">Gestión de Finanzas Compartidas<br>Control claro y sincronizado</div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <div id="contenidoPrincipal" style="display:none;">
+        <div class="admin-bar" id="adminBar">
+            <input type="password" id="claveAdmin" placeholder="Contraseña Administrador">
+            <button onclick="verificarAdmin()">Entrar como Admin</button>
+        </div>
+
+        <div class="saldo-grande" id="saldoTotal">$0</div>
+        <div class="fila-resumen">
+            <div class="caja ing"><h4>Total Ingresos</h4><p id="totalIng">$0</p></div>
+            <div class="caja gas"><h4>Total Gastos</h4><p id="totalGas">$0</p></div>
+        </div>
+
+        <div class="periodo">
+            <h4>📅 Periodo semanal: Lunes 10:01 hs → Lunes siguiente 10:00 hs</h4>
+            <p style="margin-top:0.5rem;">Ingresos semana: <span id="ingSem">$0</span> | Gastos semana: <span id="gasSem">$0</span></p>
+        </div>
+
+        <div class="alertas" id="alertas">
+            <h4>⚠️ Vencimientos próximos (3 días)</h4>
+            <div id="listaAlertas" style="margin-top:0.5rem;"></div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn activo" onclick="cambiarTab('ingreso')">Ingresos</button>
+            <button class="tab-btn" onclick="cambiarTab('gasto')">Gastos</button>
+            <button class="tab-btn" onclick="cambiarTab('servicio')">Servicios/Tarjetas</button>
+            <button class="tab-btn" onclick="cambiarTab('largo')">Gastos Largo Plazo</button>
+            <button class="tab-btn" onclick="cambiarTab('clientes')">Clientes</button>
+            <button class="tab-btn" onclick="cambiarTab('historial')">Historial</button>
+        </div>
+
+        <!-- FORMULARIOS -->
+        <div class="form activo" id="form-ingreso">
+            <h4>💰 Registrar Ingreso / Venta</h4>
+            <input type="date" id="fIng" required>
+            <input type="text" id="detalleIng" placeholder="Detalle (ej: Venta, Trabajo)" required>
+            <input type="number" id="mIng" placeholder="Monto en $" step="0.01" min="0.01" required>
+            <button onclick="guardar('ingresos', {fecha:document.getElementById('fIng').value, detalle:document.getElementById('detalleIng').value, monto:parseFloat(document.getElementById('mIng').value)})">Guardar Ingreso</button>
+        </div>
+
+        <div class="form" id="form-gasto">
+            <h4>💸 Registrar Gasto</h4>
+            <input type="date" id="fGas" required>
+            <input type="text" id="detalleGas" placeholder="Detalle (ej: Supermercado, Nafta)" required>
+            <input type="number" id="mGas" placeholder="Monto en $" step="0.01" min="0.01" required>
+            <button onclick="guardar('gastos', {fecha:document.getElementById('fGas').value, detalle:document.getElementById('detalleGas').value, monto:parseFloat(document.getElementById('mGas').value)})">Guardar Gasto</button>
+        </div>
+
+        <div class="form" id="form-servicio">
+            <h4>🏠 Servicios y Tarjetas</h4>
+            <input type="text" id="nomServ" placeholder="Nombre (ej: Luz, Tarjeta Naranja)" required>
+            <input type="number" id="montoServ" placeholder="Monto total $" step="0.01" min="0.01" required>
+            <input type="date" id="vtoServ" required>
+            <select id="estadoServ">
+                <option value="pendiente">Pendiente de pago</option>
+                <option value="pagado">Ya pagado</option>
+            </select>
+            <button onclick="guardar('servicios', {nombre:document.getElementById('nomServ').value, monto:parseFloat(document.getElementById('montoServ').value), vencimiento:document.getElementById('vtoServ').value, estado:document.getElementById('estadoServ').value})">Guardar Servicio</button>
+        </div>
+
+        <div class="form" id="form-largo">
+            <h4>📅 Gastos a Largo Plazo / Avances</h4>
+            <input type="text" id="nomLargo" placeholder="Nombre (ej: Gimnasio, Viaje)" required>
+            <input type="number" id="totalLargo" placeholder="Monto total del gasto $" step="0.01" min="0.01" required>
+            <input type="number" id="avanceLargo" placeholder="Cuánto abonas ahora $" step="0.01" min="0.01" required>
+            <button onclick="guardar('gastosLargo', {nombre:document.getElementById('nomLargo').value, total:parseFloat(document.getElementById('totalLargo').value), avance:parseFloat(document.getElementById('avanceLargo').value)})">Guardar Avance</button>
+        </div>
+
+        <div class="form" id="form-clientes">
+            <h4>👤 Saldos Pendientes de Clientes</h4>
+            <input type="text" id="nomCli" placeholder="Nombre del Cliente" required>
+            <input type="number" id="deudaCli" placeholder="Monto que debe $" step="0.01" min="0.01" required>
+            <input type="number" id="pagoCli" placeholder="Pago que hace ahora $" step="0.01" value="0" min="0">
+            <button onclick="guardar('clientes', {nombre:document.getElementById('nomCli').value, deuda:parseFloat(document.getElementById('deudaCli').value), pago:parseFloat(document.getElementById('pagoCli').value)})">Guardar</button>
+        </div>
+
+        <div class="form" id="form-historial">
+            <h4>📜 Historial Completo</h4>
+            <div id="listaHistorial" style="margin-top:1rem;"></div>
+        </div>
+    </div>
+
+    <script>
+        let datos = {};
+        let esAdmin = false;
+
+        // OCULTAR PANTALLA DE INICIO DESPUÉS DE 2 SEGUNDOS
+        setTimeout(() => {
+            document.getElementById('pantallaInicio').classList.add('oculta');
+            setTimeout(() => {
+                document.getElementById('contenidoPrincipal').style.display = 'block';
+                cargarDatos();
+            }, 800);
+        }, 2000);
+
+        // CARGAR DATOS DEL SERVIDOR
+        async function cargarDatos() {
+            try {
+                const res = await fetch('/api/datos');
+                datos = await res.json();
+                actualizarTodo();
+            } catch (e) {
+                console.log('Esperando conexión...');
+            }
+        }
+
+        // GUARDAR NUEVO REGISTRO
+        async function guardar(tipo, registro) {
+            if (!registro.monto && !registro.deuda) return alert('Completa todos los datos correctamente');
+            await fetch('/api/guardar', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({tipo, registro})
+            });
+            await cargarDatos();
+            alert('✅ Registro guardado y sincronizado');
+        }
+
+        // BORRAR (SOLO ADMIN)
+        async function borrar(tipo, id) {
+            if (!esAdmin) return alert('🔒 Solo el Administrador puede borrar registros');
+            if (!confirm('¿Seguro que quieres borrar este registro? No se puede deshacer')) return;
+            const clave = prompt('Ingresa la contraseña de Administrador:');
+            if (!clave) return;
+            await fetch('/api/borrar', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({tipo, id, claveAdmin: clave})
+            });
+            await cargarDatos();
+            alert('✅ Registro borrado');
+        }
+
+        // VERIFICAR ADMIN
+        async function verificarAdmin() {
+            const clave = document.getElementById('claveAdmin').value.trim();
+            if (!clave) return alert('Escribe la contraseña');
+            const res = await fetch('/api/verificar-admin', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({clave})
+            });
+            const {esAdmin: ok} = await res.json();
+            esAdmin = ok;
+            alert(ok ? '✅ Modo Administrador activado' : '❌ Contraseña incorrecta');
+            document.querySelectorAll('.borrar').forEach(b => b.classList.toggle('visible', ok));
+        }
+
+        // CAMBIAR PESTAÑAS
+        function cambiarTab(tipo) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('activo'));
+            document.querySelectorAll('.form').forEach(f => f.classList.remove('activo'));
+            event.target.classList.add('activo');
+            document.getElementById(`form-${tipo}`).classList.add('activo');
+            if (tipo === 'historial') cargarHistorial();
+        }
+
+        // CALCULAR SEMANA (LUNES 10:01 A LUNES SIGUIENTE 10:00)
+        function obtenerSemana(fecha) {
+            const d = new Date(fecha);
+            d.setHours(10, 1, 0, 0);
+            const diaSemana = d.getDay();
+            const diasRestar = diaSemana === 0 ? 6 : diaSemana - 1;
+            const inicioSemana = new Date(d);
+            inicioSemana.setDate(d.getDate() - diasRestar);
+            return inicioSemana.toDateString();
+        }
+
+        // ACTUALIZAR TODOS LOS CÁLCULOS
+        function actualizarTodo() {
+            const totalIng = datos.ingresos.reduce((s,i) => s + i.monto, 0);
+            const totalGas = datos.gastos.reduce((s,g) => s + g.monto, 0);
+            const saldo = totalIng - totalGas;
+            
+            document.getElementById('saldoTotal').textContent = `${saldo >=0 ? '+' : ''}$${saldo.toFixed(2)}`;
+            document.getElementById('saldoTotal').style.background = saldo >=0 ? 'linear-gradient(135deg,#16a34a,#15803d)' : 'linear-gradient(135deg,#dc2626,#b91c1c)';
+            document.getElementById('totalIng').textContent = `$${totalIng.toFixed(2)}`;
+            document.getElementById('totalGas').textContent = `$${totalGas.toFixed(2)}`;
+
+            const semanaActual = obtenerSemana(new Date());
+            const ingSem = datos.ingresos.filter(i => obtenerSemana(i.fecha) === semanaActual).reduce((s,i) => s + i.monto, 0);
+            const gasSem = datos.gastos.filter(g => obtenerSemana(g.fecha) === semanaActual).reduce((s,g) => s + g.monto, 0);
+            document.getElementById('ingSem').textContent = `$${ingSem.toFixed(2)}`;
+            document.getElementById('gasSem').textContent = `$${gasSem.toFixed(2)}`;
+
+            // ALERTAS DE VENCIMIENTOS
+            const hoy = new Date();
+            const alertas = datos.servicios.filter(s => {
+                if (s.estado === 'pagado') return false;
+                const vto = new Date(s.vencimiento);
+                const dias = Math.ceil((vto - hoy) / (1000 * 60 * 60 * 24));
+                return dias >=0 && dias <=3;
+            });
+            const cajaAlerta = document.getElementById('alertas');
+            cajaAlerta.classList.toggle('activo', alertas.length > 0);
+            document.getElementById('listaAlertas').innerHTML = alertas.length > 0 
+                ? alertas.map(a => `<p>📌 ${a.nombre}: vence el ${a.vencimiento}</p>`).join('')
+                : '<p>No hay vencimientos próximos</p>';
+        }
+
+        // CARGAR HISTORIAL
+        function cargarHistorial() {
+            const todos = [
+                ...datos.ingresos.map(i => ({...i, tipo:'ingresos', texto:'Ingreso', signo:'+'})),
+                ...datos.gastos.map(g => ({...g, tipo:'gastos', texto:'Gasto', signo:'-'}))
+            ].sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
+
+            const lista = document.getElementById('listaHistorial');
+            lista.innerHTML = todos.length === 0 
+                ? '<p style="text-align:center; color:#64748b;">No hay movimientos registrados</p>'
+                : todos.map(item => `
+                    <div class="item">
+                        <div>
+                            <strong>${item.fecha}</strong> - ${item.detalle || item.texto}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <span class="${item.signo === '+' ? 'positivo' : 'negativo'}">${item.signo} $${item.monto.toFixed(2)}</span>
+                            <button class="borrar ${esAdmin?'visible':''}" onclick="borrar('${item.tipo}', ${item.id})">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        // SINCRONIZACIÓN AUTOMÁTICA CADA 10 SEGUNDOS
+        setInterval(cargarDatos, 10000);
+
+        // REGISTRAR PARA FUNCIONAR COMO PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('PWA lista'));
+        }
+    </script>
+</body>
+</html>
